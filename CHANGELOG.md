@@ -1,3 +1,10 @@
+## [0.1.5] - 2017-12-12
+### Added
+- `clustering:` Port `KMeansModel`
+- `util:` Port `Loader`, which can load a `KMeansModel` from a Parquet file or directory of files, whether local and WebHDFS
+- `util:` Port `NumericParser`
+- `util:` Port `StringTokenizer`
+
 ## [0.1.3] - 2017-11-11
 ### Added
 - `clustering:` Ported `KMeans` `fastSquaredDistance()`, `findClosest()` and `pointCost()`
