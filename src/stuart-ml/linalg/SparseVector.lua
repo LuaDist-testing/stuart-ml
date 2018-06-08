@@ -4,16 +4,17 @@ local Vector = require 'stuart-ml.linalg.Vector'
 
 local SparseVector = class('SparseVector', Vector)
 
+-- @param indices 0-based indices
 function SparseVector:initialize(size, indices, values)
+  assert(#indices == #values, 'Sparse vectors require that the dimension of the '
+    .. 'indices match the dimension of the values. You provided ' .. #indices .. ' indices and '
+    .. #values .. ' values')
+  assert(#indices <= size, 'You provided ' .. #indices .. ' indices and values, '
+    .. 'which exceeds the specified vector size ' .. size)
   Vector.initialize(self)
   self._size = size
   self.indices = indices
   self.values = values
-  self.numActives = #values
-  self.numNonzeros = moses.reduce(values, function(r,v)
-    if v ~= 0 then r = r + 1 end
-    return r
-  end, 0)
 end
 
 function SparseVector.__eq(a, b)
@@ -42,20 +43,20 @@ function SparseVector:__index(key)
 end
 
 function SparseVector:__tostring()
-  return '(' .. self._size .. ',['
-    .. table.concat(self.indices,',') .. '],['
-    .. table.concat(self.values,',') .. '])'
+  return '(' .. self._size .. ',{'
+    .. table.concat(self.indices,',') .. '},{'
+    .. table.concat(self.values,',') .. '})'
 end
 
 function SparseVector:argmax()
   if self._size == 0 then return -1 end
-  if self.numActives == 0 then return 0 end
-  -- Find the max active entry.
+  if self:numActives() == 0 then return 0 end
+  -- Find the max active entry
   local maxIdx = self.indices[1]
   local maxValue = self.values[1]
   local maxJ = 0
-  local na = self.numActives
-  for j=1,na do
+  local na = self:numActives()
+  for j=2,na do
     local v = self.values[j]
     if v > maxValue then
       maxValue = v
@@ -69,13 +70,13 @@ function SparseVector:argmax()
     if maxValue == 0.0 then
       -- If there exists an inactive entry before maxIdx, find it and return its index.
       if maxJ < maxIdx then
-        local k = 1
-        while k < maxJ and self.indices[k] == k do k = k + 1 end
+        local k = 0
+        while k < maxJ and self.indices[k+1] == k do k = k + 1 end
         maxIdx = k
       end
     else
       local k = 0
-      while k < na and self.indices[k] == k do k = k + 1 end
+      while k < na and self.indices[k+1] == k do k = k + 1 end
       maxIdx = k
     end
   end
@@ -100,7 +101,7 @@ end
 function SparseVector:toArray()
   local data = moses.rep(0, self._size)
   for i,k in ipairs(self.indices) do
-    data[k] = self.values[i]
+    data[k+1] = self.values[i]
   end
   return data
 end
@@ -111,7 +112,7 @@ function SparseVector:toDense()
 end
 
 function SparseVector:toSparse()
-  if self.numActives == self.numNonzeros then return self end
+  if self:numActives() == self:numNonzeros() then return self end
   local ii = {}
   local vv = {}
   self:foreachActive(function(i,v)
